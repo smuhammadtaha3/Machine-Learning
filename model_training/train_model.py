@@ -257,6 +257,7 @@ print('Train Accuracy: %f' % (np.mean(p == y_train) * 100))
 # PART 3: SAVING THE MODEL
 # ==========================================
 
+# NOTE: The notebook used `model` but it was undefined. 
 # Saving the learned weights `w` and `b` as a dictionary so it works flawlessly.
 model = {"weights": w, "bias": b}
 

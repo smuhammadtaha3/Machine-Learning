@@ -1,39 +1,106 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Admission Predictor</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Admission Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { background: white; width: 60%; margin: 20px auto; padding: 30px; border-radius: 15px; box-shadow: 0px 10px 25px rgba(0,0,0,0.1); }
+        h2 { color: #1a73e8; }
+        .input-group { margin-bottom: 20px; }
+        input { padding: 12px; margin: 5px; border-radius: 8px; border: 1px solid #ddd; width: 150px; outline: none; }
+        input:focus { border-color: #1a73e8; }
+        button { padding: 12px 25px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #218838; transform: translateY(-2px); }
+        #result { margin-top: 20px; font-size: 1.2rem; color: #333; }
+        
+        /* Stats Dashboard Styling */
+        .stats-card { margin-top: 40px; padding: 20px; background: #f8f9fa; border-top: 4px solid #007bff; border-radius: 10px; }
+        .accuracy-box { font-size: 1.5rem; color: #007bff; font-weight: bold; margin: 10px 0; }
+        .graph-container { margin-top: 20px; background: white; padding: 10px; border-radius: 10px; border: 1px solid #eee; }
+        img { max-width: 100%; height: auto; border-radius: 5px; }
+        .loader { color: #666; font-style: italic; }
+    </style>
 </head>
 <body>
 
-<h2>Student Admission Predictor</h2>
+<div class="container">
+    <h2>Student Admission Predictor</h2>
+    <p>Apne exams ke marks dakhil karein aur admission ka imkan check karein.</p>
+    
+    <div class="input-group">
+        <input type="number" id="exam1" placeholder="Exam 1 Score">
+        <input type="number" id="exam2" placeholder="Exam 2 Score">
+        <button onclick="predict()">Predict Status</button>
+    </div>
+    
+    <h3 id="result"></h3>
 
-<input type="number" id="exam1" placeholder="Exam 1 Score">
-<input type="number" id="exam2" placeholder="Exam 2 Score">
-<button onclick="predict()">Predict</button>
+    <div class="stats-card">
+        <h3>Model Insights Dashboard</h3>
+        <p>Model ki training performance niche di gayi hai:</p>
+        
+        <div class="accuracy-box">
+            Training Accuracy: <span id="accuracy">...</span>%
+        </div>
 
-<h3 id="result"></h3>
+        <div class="graph-container">
+            <h4>Decision Boundary Graph</h4>
+            <div id="loading-msg" class="loader">Graph loading...</div>
+            <img id="boundary-graph" src="" alt="Model Graph" style="display:none;" onload="document.getElementById('loading-msg').style.display='none'; this.style.display='block';">
+        </div>
+    </div>
+</div>
 
 <script>
-function predict() {
-    let exam1 = document.getElementById("exam1").value;
-    let exam2 = document.getElementById("exam2").value;
-
-    fetch("http://127.0.0.1:5000/predict", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            exam1: parseFloat(exam1),
-            exam2: parseFloat(exam2)
+    // Page load hote hi backend se accuracy aur graph path fetch karein
+    window.onload = function() {
+        fetch("http://127.0.0.1:5000/stats")
+        .then(res => {
+            if (!res.ok) throw new Error("Stats not found");
+            return res.json();
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        document.getElementById("result").innerText =
-            data.prediction === 1 ? "Admitted 🎉" : "Not Admitted ❌";
-    });
-}
+        .then(data => {
+            document.getElementById("accuracy").innerText = data.accuracy;
+            // Time stamp add kiya hai taake cache ka masla na ho
+            document.getElementById("boundary-graph").src = data.graph_url + "?t=" + new Date().getTime();
+        })
+        .catch(err => {
+            console.log("Error fetching stats:", err);
+            document.getElementById("accuracy").innerText = "Error";
+        });
+    };
+
+    function predict() {
+        let exam1 = document.getElementById("exam1").value;
+        let exam2 = document.getElementById("exam2").value;
+        let resultDiv = document.getElementById("result");
+
+        if(!exam1 || !exam2) {
+            alert("Please enter both scores!");
+            return;
+        }
+
+        resultDiv.innerText = "Processing...";
+
+        fetch("http://127.0.0.1:5000/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ exam1: parseFloat(exam1), exam2: parseFloat(exam2) })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.prediction === 1) {
+                resultDiv.innerHTML = "<span style='color: #28a745;'>Result: Admitted 🎉</span>";
+            } else {
+                resultDiv.innerHTML = "<span style='color: #dc3545;'>Result: Not Admitted ❌</span>";
+            }
+        })
+        .catch(err => {
+            resultDiv.innerText = "Error connecting to backend!";
+        });
+    }
 </script>
 
 </body>

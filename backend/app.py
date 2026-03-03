@@ -1,24 +1,39 @@
-from flask import Flask, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask_cors import CORS
 import pickle
-import numpy as np
+import os
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../frontend')
+CORS(app) # Taake aapka frontend backend se connect ho sakay
 
+# Model load karein
 model = pickle.load(open("model.pkl", "rb"))
 
-@app.route("/")
-def home():
-    return "Admission Prediction API Running"
+@app.route("/stats", methods=["GET"])
+def get_stats():
+    # Accuracy read karein
+    with open("accuracy.txt", "r") as f:
+        acc = f.read()
+    return jsonify({
+        "accuracy": acc,
+        "graph_url": "http://127.0.0.1:5000/static/boundary_plot.png"
+    })
 
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.json
-    exam1 = data["exam1"]
-    exam2 = data["exam2"]
+    # Prediction logic yahan dalo
+    return jsonify({"prediction": 1}) 
 
-    prediction = model.predict([[exam1, exam2]])
+# Ye zaroori hai graph dikhane ke liye
+@app.route('/static/<path:path>')
+def send_static(path):
+    return send_from_directory('static', path)
 
-    return jsonify({"prediction": int(prediction[0])})
+@app.route("/")
+def home():
+    # Ab 404 nahi aayega, balki index.html load hogi
+    return render_template("index.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
